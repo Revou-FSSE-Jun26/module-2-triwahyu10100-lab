@@ -1,0 +1,30 @@
+# --- OS files ---
+.DS_Store
+Thumbs.db
+
+# --- Editor / IDE ---
+.vscode/
+.idea/
+*.swp
+
+# --- DBeaver local workspace (never commit local connection/creds) ---
+.dbeaver/
+*-workspace/
+DBeaverData/
+
+# --- Environment / secrets ---
+.env
+.env.local
+*.pgpass
+
+# --- PostgreSQL local artifacts ---
+*.log
+pg_data/
+*.backup
+*.dump
+
+# --- Python (in case Checkpoint 2 SQLAlchemy venv lands in this repo) ---
+__pycache__/
+*.pyc
+.venv/
+venv/
