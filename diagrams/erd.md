@@ -1,11 +1,5 @@
 # RevoShop ERD — Checkpoint 1
 
-This diagram can be viewed directly on GitHub (Mermaid renders automatically
-in `.md` files) or pasted into https://mermaid.live for a standalone image.
-
-You can also generate an equivalent diagram in DBeaver:
-right-click `revoshop_db` → **View Diagram**, then export as PNG and drop it
-in this `diagrams/` folder alongside (or instead of) this file.
 
 ```mermaid
 erDiagram
