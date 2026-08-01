@@ -2,7 +2,7 @@
 -- RevoShop Database Schema — Checkpoint 1
 -- File: schema.sql
 -- Description: Core table definitions for the RevoShop store.
--- Run this against an empty database, e.g. revoshop_db.
+-- Run this against an empty database, e.g. revoshop_sql.
 -- ============================================================
 
 -- Drop tables if re-running this script during development.
