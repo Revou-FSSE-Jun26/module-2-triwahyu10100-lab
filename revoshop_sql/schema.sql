@@ -68,7 +68,7 @@ CREATE TABLE orders (
     order_id      SERIAL PRIMARY KEY,
     user_id       INTEGER        NOT NULL,
     order_date    TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    status        VARCHAR(20)    NOT NULL DEFAULT 'pending'
+    status        VARCHAR(20)    NOT NULL DEFAULT 'waiting'
                      CHECK (status IN ('waiting', 'paid', 'shipped', 'delivered', 'cancelled')),
     total_amount  NUMERIC(10, 2) NOT NULL DEFAULT 0 CHECK (total_amount >= 0),
     shipping_address VARCHAR(255) NOT NULL,
@@ -108,3 +108,10 @@ CREATE TABLE order_items (
     CONSTRAINT uq_order_product UNIQUE (order_id, product_id)
 );
 
+-- ------------------------------------------------------------
+-- Helpful indexes for common lookups / joins
+-- ------------------------------------------------------------
+CREATE INDEX idx_products_category_id ON products (category_id);
+CREATE INDEX idx_orders_user_id       ON orders (user_id);
+CREATE INDEX idx_order_items_order_id ON order_items (order_id);
+CREATE INDEX idx_order_items_product_id ON order_items (product_id);
