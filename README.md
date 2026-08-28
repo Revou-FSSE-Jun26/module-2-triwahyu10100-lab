@@ -163,9 +163,6 @@ yang menyimpan snapshot harga saat pembelian.
    ```
    Server berjalan di `http://127.0.0.1:5000`.
 
-Untuk panduan langkah-demi-langkah yang lebih detail (termasuk varian
-bash, DBeaver, dan troubleshooting), lihat `TUTORIAL_CHECKPOINT2.md`.
-
 ### Menjalankan tests
 
 ```powershell
