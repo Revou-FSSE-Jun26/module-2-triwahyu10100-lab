@@ -13,27 +13,52 @@ class Product(db.Model):
         db.Integer, db.ForeignKey('categories.category_id'), nullable=False
     )
     product_name = db.Column(db.String(150), nullable=False)
+    slug = db.Column(db.String(180), nullable=False, unique=True)
     description = db.Column(db.Text, nullable=True)
     price = db.Column(db.Numeric(10, 2), nullable=False)
     stock_quantity = db.Column(db.Integer, nullable=False, default=0)
     sku = db.Column(db.String(50), nullable=False, unique=True)
+
+    # List of image URLs, e.g. ["https://.../1.jpg", "https://.../2.jpg"].
+    # Stored as JSON so it works the same on Postgres (production) and
+    # SQLite (pytest's in-memory TestConfig).
+    images = db.Column(db.JSON, nullable=False, default=list)
+
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+    # Soft-delete marker. NULL = active product. Products are never hard
+    # deleted once they have order history, so this lets the catalog
+    # "remove" a product without breaking historical orders/order_items.
+    deleted_at = db.Column(db.DateTime, nullable=True)
 
     # Many-to-many with Order, through the order_items association table.
     orders = db.relationship(
         'Order', secondary='order_items', back_populates='products'
     )
 
+    @property
+    def is_deleted(self):
+        return self.deleted_at is not None
+
     def to_dict(self):
         return {
             'id': self.id,
             'category_id': self.category_id,
             'product_name': self.product_name,
+            'slug': self.slug,
             'description': self.description,
             'price': float(self.price) if self.price is not None else None,
             'stock_quantity': self.stock_quantity,
             'sku': self.sku,
+            'images': self.images or [],
             'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
         }
 
     def __repr__(self):

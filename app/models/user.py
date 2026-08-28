@@ -29,6 +29,7 @@ class User(db.Model):
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     phone = db.Column(db.String(20), nullable=True)
+    address = db.Column(db.String(255), nullable=True)
 
     email = db.Column(db.String(255), nullable=False, unique=True)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -39,7 +40,16 @@ class User(db.Model):
     # instead of ending up NULL when the column is introduced.
     role = db.Column(db.String(20), nullable=False, server_default='customer')
 
+    # Soft-delete marker. NULL = active account. Users are never hard
+    # deleted once they have order history, so this "deactivates" an
+    # account without breaking the FK on orders.user_id.
+    deleted_at = db.Column(db.DateTime, nullable=True)
+
     orders = db.relationship('Order', backref='user', lazy=True)
+
+    @property
+    def is_deleted(self):
+        return self.deleted_at is not None
 
     def to_dict(self):
         return {
@@ -49,8 +59,10 @@ class User(db.Model):
             'last_name': self.last_name,
             'email': self.email,
             'phone': self.phone,
+            'address': self.address,
             'role': self.role,
             'created_at': self.created_at.isoformat() if self.created_at else None,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None,
         }
 
     def __repr__(self):

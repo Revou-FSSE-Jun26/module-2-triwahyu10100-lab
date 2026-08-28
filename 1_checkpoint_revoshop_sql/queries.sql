@@ -52,8 +52,8 @@ WHERE oi.order_id = 1;
 -- ------------------------------------------------------------
 SELECT
     p.product_name,
-    SUM(oi.quantity) AS total_units_sold,
-    SUM(oi.quantity * oi.unit_price) AS total_revenue
+    COALESCE(SUM(oi.quantity), 0) AS total_units_sold,
+    COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS total_revenue
 FROM order_items oi
 JOIN products p ON p.product_id = oi.product_id
 GROUP BY p.product_name

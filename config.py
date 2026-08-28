@@ -1,4 +1,6 @@
 import os
+from datetime import timedelta
+
 from dotenv import load_dotenv
 
 # Load variables from a local .env file (if present) into the environment.
@@ -16,3 +18,19 @@ class Config:
         'postgresql://postgres:postgres@localhost:5432/revoshop_db'
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Secret used to sign/verify JWT access tokens (Flask-JWT-Extended).
+    # Falls back to a dev-only default so local runs work without extra
+    # setup — set a real JWT_SECRET_KEY env var before deploying.
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'dev-jwt-secret-key-change-in-production')
+    # How long an access token stays valid before the client must log in
+    # again. 1 hour is a reasonable default for this checkpoint's scope
+    # (no refresh-token flow is implemented).
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+
+
+class TestConfig(Config):
+    """Configuration used by the pytest suite — isolated in-memory SQLite
+    database so tests never touch the real development/production data."""
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
