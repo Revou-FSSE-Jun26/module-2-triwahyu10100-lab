@@ -8,15 +8,24 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _normalize_database_url(url: str) -> str:
+    """Render/Heroku-style Postgres URLs use the 'postgres://' scheme, but
+    SQLAlchemy 1.4+ only recognizes 'postgresql://'. Rewrite it so the same
+    DATABASE_URL value works both locally and on those platforms."""
+    if url.startswith('postgres://'):
+        return url.replace('postgres://', 'postgresql://', 1)
+    return url
+
+
 class Config:
     """Base configuration for the Flask app."""
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
     # PostgreSQL connection string — adjust user/password to match your local setup
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
+    SQLALCHEMY_DATABASE_URI = _normalize_database_url(os.environ.get(
         'DATABASE_URL',
         'postgresql://postgres:postgres@localhost:5432/revoshop_db'
-    )
+    ))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Secret used to sign/verify JWT access tokens (Flask-JWT-Extended).

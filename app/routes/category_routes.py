@@ -9,7 +9,7 @@ category_bp = Blueprint('categories', __name__, url_prefix='/categories')
 
 @category_bp.route('', methods=['GET'])
 def list_categories():
-    """GET /categories — returns every category row as JSON."""
+    """GET /categories — mengembalikan semua baris kategori sebagai JSON."""
     categories = Category.query.all()
     return jsonify([c.to_dict() for c in categories]), 200
 
@@ -17,8 +17,8 @@ def list_categories():
 @category_bp.route('/<int:category_id>', methods=['GET'])
 def get_category(category_id):
     """
-    GET /categories/<id> — returns a single category along with the list
-    of products that belong to it.
+    GET /categories/<id> — mengembalikan satu kategori beserta daftar
+    produk yang termasuk di dalamnya.
     """
     category = Category.query.get(category_id)
     if category is None:
@@ -32,12 +32,12 @@ def get_category(category_id):
 @category_bp.route('', methods=['POST'])
 def create_category():
     """
-    POST /categories — creates a new category.
+    POST /categories — membuat kategori baru.
 
-    Expected JSON body:
+    Contoh body JSON yang diharapkan:
     {
         "category_name": "Electronics",
-        "description": "Gadgets and accessories"   # optional
+        "description": "Gadgets and accessories"   # opsional
     }
     """
     data = request.get_json(silent=True)
@@ -69,9 +69,10 @@ def create_category():
 @category_bp.route('/<int:category_id>', methods=['PUT'])
 def update_category(category_id):
     """
-    PUT /categories/<id> — updates an existing category.
+    PUT /categories/<id> — mengubah kategori yang sudah ada.
 
-    Accepts a partial JSON body; only the fields provided are updated.
+    Menerima body JSON sebagian; hanya field yang dikirim yang akan
+    diubah.
     """
     category = Category.query.get(category_id)
     if category is None:
@@ -106,10 +107,11 @@ def update_category(category_id):
 @category_bp.route('/<int:category_id>', methods=['DELETE'])
 def delete_category(category_id):
     """
-    DELETE /categories/<id> — deletes a category.
+    DELETE /categories/<id> — menghapus sebuah kategori.
 
-    Blocked (409) if the category still has products linked to it, since
-    products.category_id is NOT NULL and the DB FK is ON DELETE RESTRICT.
+    Ditolak (409) kalau kategori itu masih punya produk yang terhubung,
+    karena products.category_id bersifat NOT NULL dan FK di database
+    memakai ON DELETE RESTRICT.
     """
     category = Category.query.get(category_id)
     if category is None:

@@ -4,7 +4,7 @@ from app import db
 
 
 class Order(db.Model):
-    """Maps to the `orders` table from Checkpoint 1 (schema.sql)."""
+    """Terhubung ke tabel `orders` dari Checkpoint 1 (schema.sql)."""
 
     __tablename__ = 'orders'
 
@@ -14,8 +14,8 @@ class Order(db.Model):
     status = db.Column(db.String(20), nullable=False, default='waiting')
     total_amount = db.Column(db.Numeric(10, 2), nullable=False, default=0)
     shipping_address = db.Column(db.String(255), nullable=False)
-
-    # Many-to-many with Product, through the order_items association table.
+    
+    # Many-to-many dengan Product, lewat tabel asosiasi order_items.
     products = db.relationship(
         'Product', secondary='order_items', back_populates='orders'
     )

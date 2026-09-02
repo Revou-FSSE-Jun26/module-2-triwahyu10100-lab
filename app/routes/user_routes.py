@@ -15,16 +15,16 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 @user_bp.route('', methods=['POST'])
 def register_user():
     """
-    POST /users — creates a new User row in the database.
+    POST /users — membuat baris User baru di database.
 
-    Expected JSON body:
+    Contoh body JSON yang diharapkan:
     {
         "username": "budi123",
         "first_name": "Budi",
         "last_name": "Santoso",
         "email": "budi@example.com",
-        "phone": "+62-812-0000-0000",           # optional
-        "address": "Jl. Merdeka No. 10, Jakarta", # optional
+        "phone": "+62-812-0000-0000",           # opsional
+        "address": "Jl. Merdeka No. 10, Jakarta", # opsional
         "password": "plaintext-password"
     }
     """
@@ -66,11 +66,12 @@ def register_user():
 @user_bp.route('/<int:user_id>', methods=['GET'])
 def get_user(user_id):
     """
-    GET /users/<id> — retrieves a single user by id.
+    GET /users/<id> — mengambil satu user berdasarkan id.
 
-    Returns 404 both when the id doesn't exist and when the account has
-    been soft-deleted — from the API consumer's point of view a
-    deactivated account should look the same as one that was never there.
+    Mengembalikan 404 baik saat id-nya memang tidak ada, maupun saat
+    akun itu sudah soft-delete — dari sudut pandang pengguna API, akun
+    yang sudah dinonaktifkan harus terlihat sama seperti akun yang
+    memang tidak pernah ada.
     """
     user = User.query.get(user_id)
     if user is None or user.is_deleted:
@@ -82,17 +83,18 @@ def get_user(user_id):
 @jwt_required()
 def update_user(user_id):
     """
-    PUT /users/<id> — updates a user's own profile fields.
+    PUT /users/<id> — mengubah field profil milik user sendiri.
 
-    Requires a valid JWT (Authorization: Bearer <access_token>) obtained
-    from POST /auth/login. The token's identity must match `user_id` in
-    the URL — a logged-in user can only update their own profile, never
-    someone else's, even if they know that user's id.
+    Membutuhkan JWT yang valid (Authorization: Bearer <access_token>)
+    yang didapat dari POST /auth/login. Identitas token harus sama
+    dengan `user_id` di URL — user yang sedang login hanya bisa
+    mengubah profilnya sendiri, tidak pernah milik orang lain, walau
+    dia tahu id user tersebut.
 
-    Accepts a partial JSON body; only phone/address/username can be
-    changed here — email and password are intentionally left out of this
-    endpoint's scope (changing credentials would need re-verification,
-    which is outside what Module 2 covers).
+    Menerima body JSON sebagian; hanya phone/address/username yang bisa
+    diubah di sini — email dan password sengaja tidak dimasukkan ke
+    lingkup endpoint ini (mengubah kredensial memerlukan verifikasi
+    ulang, yang di luar cakupan Modul 2).
     """
     if int(get_jwt_identity()) != user_id:
         return jsonify({'error': 'You can only update your own account'}), 403
@@ -131,14 +133,15 @@ def update_user(user_id):
 @jwt_required()
 def delete_user(user_id):
     """
-    DELETE /users/<id> — soft-deletes a user account (sets deleted_at).
+    DELETE /users/<id> — soft-delete akun user (mengisi deleted_at).
 
-    Requires a valid JWT whose identity matches `user_id` — a user can
-    only deactivate their own account, never someone else's.
+    Membutuhkan JWT valid yang identitasnya sama dengan `user_id` — user
+    hanya bisa menonaktifkan akunnya sendiri, tidak pernah akun orang
+    lain.
 
-    The row is kept so existing orders (orders.user_id has no ON DELETE
-    CASCADE) remain valid; the account just becomes unable to log in or
-    be looked up going forward.
+    Baris datanya tetap dipertahankan supaya order-order yang sudah ada
+    (kolom orders.user_id tidak punya ON DELETE CASCADE) tetap valid;
+    akunnya cuma jadi tidak bisa login atau dicari lagi ke depannya.
     """
     if int(get_jwt_identity()) != user_id:
         return jsonify({'error': 'You can only delete your own account'}), 403
@@ -160,27 +163,28 @@ def delete_user(user_id):
 @auth_bp.route('/login', methods=['POST'])
 def login():
     """
-    POST /auth/login — verifies email/password and issues a JWT access
-    token for the account.
+    POST /auth/login — memverifikasi email/password dan menerbitkan JWT
+    access token untuk akun tersebut.
 
-    Expected JSON body:
+    Contoh body JSON yang diharapkan:
     {
         "email": "budi@example.com",
         "password": "plaintext-password"
     }
 
-    Response body:
+    Contoh body response:
     {
         "access_token": "<JWT>",
-        "user": { ...same shape as GET /users/<id>... }
+        "user": { ...bentuknya sama seperti GET /users/<id>... }
     }
 
-    The client must send `access_token` as a Bearer token
-    (`Authorization: Bearer <access_token>`) on every subsequent request
-    to an endpoint protected with @jwt_required() — e.g. POST /orders,
-    PUT/DELETE /users/<id>. There is no separate refresh-token flow: once
-    the token expires (see JWT_ACCESS_TOKEN_EXPIRES in config.py), the
-    client must call this endpoint again.
+    Client harus mengirim `access_token` sebagai Bearer token
+    (`Authorization: Bearer <access_token>`) pada setiap request
+    berikutnya ke endpoint yang dilindungi @jwt_required() — misalnya
+    POST /orders, PUT/DELETE /users/<id>. Tidak ada mekanisme
+    refresh-token terpisah: begitu token expired (lihat
+    JWT_ACCESS_TOKEN_EXPIRES di config.py), client harus memanggil
+    endpoint ini lagi.
     """
     data = request.get_json(silent=True)
     if not data:
@@ -197,14 +201,16 @@ def login():
         or user.is_deleted
         or not check_password_hash(user.password_hash, validated['password'])
     ):
-        # Deliberately the same generic message for "no such user",
-        # "wrong password", and "deactivated account" — this avoids
-        # leaking which emails are registered or deactivated.
+        # Sengaja pakai pesan generik yang sama untuk "user tidak ada",
+        # "password salah", dan "akun sudah dinonaktifkan" — ini
+        # menghindari kebocoran informasi soal email mana yang
+        # terdaftar atau sudah dinonaktifkan.
         return jsonify({'error': 'Invalid email or password'}), 401
 
-    # The JWT "identity" is the subject the token vouches for. It's kept
-    # as a string (flask-jwt-extended's recommended practice) and turned
-    # back into an int via get_jwt_identity() wherever it's consumed.
+    # "identity" pada JWT adalah subjek yang dijamin oleh token
+    # tersebut. Disimpan sebagai string (sesuai praktik yang
+    # direkomendasikan flask-jwt-extended), dan diubah balik jadi
+    # integer lewat get_jwt_identity() di setiap tempat yang memakainya.
     access_token = create_access_token(identity=str(user.id))
 
     return jsonify({'access_token': access_token, 'user': user.to_dict()}), 200

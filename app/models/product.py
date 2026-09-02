@@ -4,7 +4,7 @@ from app import db
 
 
 class Product(db.Model):
-    """Maps to the `products` table from Checkpoint 1 (schema.sql)."""
+    """Terhubung ke tabel `products` dari Checkpoint 1 (schema.sql)."""
 
     __tablename__ = 'products'
 
@@ -19,9 +19,9 @@ class Product(db.Model):
     stock_quantity = db.Column(db.Integer, nullable=False, default=0)
     sku = db.Column(db.String(50), nullable=False, unique=True)
 
-    # List of image URLs, e.g. ["https://.../1.jpg", "https://.../2.jpg"].
-    # Stored as JSON so it works the same on Postgres (production) and
-    # SQLite (pytest's in-memory TestConfig).
+    # Daftar URL gambar, contoh: ["https://.../1.jpg", "https://.../2.jpg"].
+    # Disimpan sebagai JSON supaya bekerja sama baiknya di Postgres
+    # (production) dan SQLite (TestConfig in-memory milik pytest).
     images = db.Column(db.JSON, nullable=False, default=list)
 
     created_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
@@ -31,12 +31,13 @@ class Product(db.Model):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
-    # Soft-delete marker. NULL = active product. Products are never hard
-    # deleted once they have order history, so this lets the catalog
-    # "remove" a product without breaking historical orders/order_items.
+    # Penanda soft-delete. NULL = produk aktif. Produk tidak pernah
+    # dihapus permanen begitu punya histori order, jadi ini
+    # membolehkan katalog "menghapus" produk tanpa merusak histori
+    # order/order_items.
     deleted_at = db.Column(db.DateTime, nullable=True)
 
-    # Many-to-many with Order, through the order_items association table.
+    # Many-to-many dengan Order, lewat tabel asosiasi order_items.
     orders = db.relationship(
         'Order', secondary='order_items', back_populates='products'
     )

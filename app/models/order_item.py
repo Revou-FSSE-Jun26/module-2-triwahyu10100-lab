@@ -1,14 +1,14 @@
 from app import db
 
 # ------------------------------------------------------------
-# order_items — association table implementing the many-to-many
-# relationship between orders and products (Checkpoint 1 schema.sql).
+# order_items — tabel asosiasi yang mengimplementasikan relasi
+# many-to-many antara orders dan products (Checkpoint 1 schema.sql).
 #
-# Defined with db.Table() rather than a full model class, per the
-# checkpoint's requirement to model it as a plain association table.
-# It still carries quantity/unit_price columns (matching schema.sql)
-# so the price snapshot at purchase time is preserved even if a
-# product's price changes later.
+# Didefinisikan dengan db.Table(), bukan class model penuh, sesuai
+# syarat checkpoint untuk memodelkannya sebagai tabel asosiasi murni.
+# Tetap menyimpan kolom quantity/unit_price (sesuai schema.sql) supaya
+# snapshot harga saat pembelian tetap tersimpan, walau harga produk
+# berubah di kemudian hari.
 # ------------------------------------------------------------
 order_items = db.Table(
     'order_items',

@@ -13,21 +13,21 @@ order_bp = Blueprint('orders', __name__, url_prefix='/orders')
 
 VALID_ORDER_STATUSES = ('waiting', 'paid', 'shipped', 'delivered', 'cancelled')
 
-# Allowed status transitions, modeled after a typical marketplace checkout
-# flow (see e.g. https://fakeapi.platzi.com/en/rest/products/ for a
-# reference marketplace schema). 'waiting' plays the role of "pending":
-# an order is placed but not yet paid.
+# Transisi status yang diperbolehkan, mengikuti alur checkout marketplace
+# pada umumnya (lihat misalnya https://fakeapi.platzi.com/en/rest/products/
+# sebagai referensi skema marketplace). 'waiting' berperan sebagai status
+# "menunggu": order sudah dibuat tapi belum dibayar.
 #
-#   waiting  -> paid       (payment succeeds, see POST /orders/<id>/pay)
-#   waiting  -> cancelled  (buyer/seller cancels before paying)
-#   paid     -> shipped    (seller ships the goods)
-#   paid     -> cancelled  (refund before the goods are shipped)
-#   shipped  -> delivered  (goods reach the buyer)
-#   delivered / cancelled  -> terminal, no further transitions
+#   waiting  -> paid       (pembayaran sukses, lihat POST /orders/<id>/pay)
+#   waiting  -> cancelled  (pembeli/penjual membatalkan sebelum bayar)
+#   paid     -> shipped    (penjual mengirim barang)
+#   paid     -> cancelled  (refund sebelum barang dikirim)
+#   shipped  -> delivered  (barang sampai ke pembeli)
+#   delivered / cancelled  -> status akhir, tidak ada transisi lagi
 #
-# Cancelling from 'waiting' or 'paid' restocks every line item; once an
-# order has shipped, physical goods are in transit and can no longer be
-# cancelled through this API.
+# Membatalkan dari status 'waiting' atau 'paid' akan mengembalikan stok
+# setiap item; begitu order sudah 'shipped', barang fisik sedang dalam
+# pengiriman dan tidak bisa lagi dibatalkan lewat API ini.
 ORDER_TRANSITIONS = {
     'waiting': {'paid', 'cancelled'},
     'paid': {'shipped', 'cancelled'},
@@ -36,20 +36,21 @@ ORDER_TRANSITIONS = {
     'cancelled': set(),
 }
 
-# Statuses in which stock has been reserved for an order and has not yet
-# been returned to inventory. Used to decide whether cancelling/deleting
-# an order needs to restock its items.
+# Status-status yang stoknya sudah direservasi untuk order dan belum
+# dikembalikan ke inventori. Dipakai untuk memutuskan apakah
+# membatalkan/menghapus sebuah order perlu mengembalikan stok item-nya.
 STOCK_RESERVED_STATUSES = ('waiting', 'paid')
 
-# Columns the client is allowed to sort GET /orders by.
+# Kolom yang boleh dipakai client untuk sorting GET /orders.
 SORTABLE_FIELDS = {'order_date', 'total_amount', 'status'}
 
 
 # ------------------------------------------------------------------ helpers
 def _order_items_for(order_id):
     """
-    Returns the order_items rows for a given order, each joined with its
-    product so the caller gets product_name alongside quantity/unit_price.
+    Mengembalikan baris-baris order_items untuk sebuah order, digabung
+    dengan tabel produk supaya pemanggilnya dapat product_name selain
+    quantity/unit_price.
     """
     rows = (
         db.session.query(order_items, Product.product_name)
@@ -79,13 +80,13 @@ def _order_to_dict(order, include_items=False):
 
 def _validate_and_resolve_items(items_payload):
     """
-    Validates a POST/PUT `items` payload against the database and returns
-    (resolved_items, error). Each resolved item is
-    {'product': <Product>, 'quantity': <int>}.
+    Memvalidasi payload `items` dari POST/PUT terhadap database dan
+    mengembalikan (resolved_items, error). Setiap item hasil resolusi
+    berbentuk {'product': <Product>, 'quantity': <int>}.
 
-    Price is intentionally never read from the request body — it always
-    comes from `product.price` in the database, so a client cannot
-    under/over-report what an item costs.
+    Harga sengaja tidak pernah dibaca dari body request — selalu
+    diambil dari `product.price` di database, supaya client tidak bisa
+    melapor harga lebih rendah/tinggi dari aslinya.
     """
     if not isinstance(items_payload, list) or len(items_payload) == 0:
         return None, 'items must be a non-empty list'
@@ -122,7 +123,7 @@ def _validate_and_resolve_items(items_payload):
 
 
 def _insert_order_items(order_id, resolved_items):
-    """Inserts order_items rows and decrements stock for each resolved item."""
+    """Memasukkan baris order_items dan mengurangi stok untuk setiap item yang sudah diresolusi."""
     for ri in resolved_items:
         product = ri['product']
         db.session.execute(
@@ -138,8 +139,9 @@ def _insert_order_items(order_id, resolved_items):
 
 def _restock_order_items(order_id):
     """
-    Returns stock to every product tied to an order (used when an order
-    is cancelled or deleted while stock was still reserved for it).
+    Mengembalikan stok ke setiap produk yang terkait sebuah order
+    (dipakai saat order dibatalkan atau dihapus ketika stoknya masih
+    ter-reservasi).
     """
     rows = db.session.query(order_items).filter(order_items.c.order_id == order_id).all()
     for row in rows:
@@ -153,15 +155,16 @@ def _restock_order_items(order_id):
 @jwt_required()
 def list_orders():
     """
-    GET /orders — lists the logged-in user's own orders (identified by
-    the JWT, not a client-supplied user_id — a user can never list
-    another user's orders). Optional query parameters:
+    GET /orders — menampilkan daftar order milik user yang sedang login
+    sendiri (diidentifikasi lewat JWT, bukan user_id yang dikirim
+    client — user tidak akan pernah bisa melihat daftar order milik
+    user lain). Parameter query opsional:
 
-    - status: filter by exact order status
-    - min_total / max_total: filter by total_amount range
-    - sort: column to sort by, e.g. 'total_amount' or '-order_date'.
-            Allowed: order_date, total_amount, status
-    - page / per_page: pagination (default page=1, per_page=20, max 100)
+    - status: filter berdasarkan status persis
+    - min_total / max_total: filter berdasarkan rentang total_amount
+    - sort: kolom pengurutan, misal 'total_amount' atau '-order_date'.
+            Diperbolehkan: order_date, total_amount, status
+    - page / per_page: pagination (default page=1, per_page=20, maks 100)
     """
     current_user_id = int(get_jwt_identity())
     query = Order.query.filter_by(user_id=current_user_id)
@@ -202,10 +205,10 @@ def list_orders():
 @jwt_required()
 def get_order(order_id):
     """
-    GET /orders/<id> — returns a single order with its items and product
-    details. Only the order's own owner (per the JWT identity) may view
-    it; anyone else gets 404 — the API never reveals that an order with
-    that id belongs to someone else.
+    GET /orders/<id> — mengembalikan satu order lengkap dengan item dan
+    detail produknya. Hanya pemilik order (sesuai identitas JWT) yang
+    boleh melihatnya; siapapun selain itu mendapat 404 — API ini tidak
+    pernah membocorkan bahwa order dengan id tersebut milik orang lain.
     """
     order = Order.query.get(order_id)
     if order is None or order.user_id != int(get_jwt_identity()):
@@ -218,14 +221,14 @@ def get_order(order_id):
 @jwt_required()
 def create_order():
     """
-    POST /orders — places a new order for the logged-in user.
+    POST /orders — membuat order baru untuk user yang sedang login.
 
-    Requires a valid JWT (Authorization: Bearer <access_token>). The
-    order's owner is always the token's identity — `user_id` is no
-    longer accepted in the request body, so a client can never place an
-    order on behalf of another user.
+    Membutuhkan JWT yang valid (Authorization: Bearer <access_token>).
+    Pemilik order selalu identitas dari token — `user_id` tidak lagi
+    diterima dari body request, jadi client tidak akan pernah bisa
+    membuat order atas nama user lain.
 
-    Expected JSON body:
+    Contoh body JSON yang diharapkan:
     {
         "shipping_address": "Jl. Merdeka No. 10, Jakarta",
         "items": [
@@ -234,14 +237,15 @@ def create_order():
         ]
     }
 
-    Business rules enforced server-side (never trusted from the request):
-    - Every product's stock must cover the requested quantity.
-    - unit_price is read from `products.price` in the database, not from
-      the request body — a client cannot submit its own price.
-    - total_amount is computed by the backend from resolved unit prices,
-      not accepted from the request body.
-    - Stock is decremented immediately so the reserved quantity cannot be
-      sold twice while the order is pending payment.
+    Aturan bisnis yang dipaksakan di sisi server (tidak pernah dipercaya
+    dari request):
+    - Stok setiap produk harus mencukupi jumlah yang diminta.
+    - unit_price dibaca dari products.price di database, bukan dari body
+      request — client tidak bisa mengirim harganya sendiri.
+    - total_amount dihitung oleh backend dari unit price yang sudah
+      diresolusi, tidak diterima dari body request.
+    - Stok langsung dikurangi supaya jumlah yang sudah direservasi tidak
+      bisa terjual dua kali selagi order masih menunggu pembayaran.
     """
     current_user_id = int(get_jwt_identity())
     user = User.query.get(current_user_id)
@@ -261,7 +265,7 @@ def create_order():
     if error:
         return jsonify({'error': error}), 400
 
-    # total_amount is derived entirely from DB prices — never from the body.
+    # total_amount seluruhnya diturunkan dari harga di database — tidak pernah dari body request.
     total_amount = sum(float(ri['product'].price) * ri['quantity'] for ri in resolved_items)
 
     try:
@@ -289,31 +293,33 @@ def create_order():
 @jwt_required()
 def update_order(order_id):
     """
-    PUT /orders/<id> — updates an existing order. Only a specific subset
-    of fields can be changed here (not a full replace):
+    PUT /orders/<id> — mengubah order yang sudah ada. Hanya subset
+    field tertentu yang bisa diubah di sini (bukan penggantian total):
 
     {
-        "status": "cancelled",              # optional, validated transition
-        "shipping_address": "New address",  # optional
-        "items": [                          # optional, replaces the full item list
+        "status": "cancelled",              # opsional, transisi divalidasi
+        "shipping_address": "New address",  # opsional
+        "items": [                          # opsional, mengganti seluruh daftar item
             {"product_id": 2, "quantity": 1}
         ]
     }
 
-    Rules:
-    - status must follow the allowed transition graph (waiting -> paid ->
-      shipped -> delivered, with cancellation from waiting/paid). Cancelling
-      restocks every item on the order.
-    - shipping_address can only change before the order has shipped
-      (waiting/paid) — once shipped, the package is already in transit.
-    - items (product/qty) can only change while the order is still
-      'waiting' (i.e. before payment). Changing items restocks the old
-      quantities, validates the new list against current stock, then
-      re-decrements stock and recomputes total_amount from DB prices.
+    Aturan:
+    - status harus mengikuti graf transisi yang diperbolehkan (waiting ->
+      paid -> shipped -> delivered, dengan pembatalan dari waiting/paid).
+      Membatalkan akan mengembalikan stok setiap item pada order.
+    - shipping_address hanya bisa diubah sebelum order dikirim
+      (waiting/paid) — begitu sudah shipped, paketnya sudah dalam
+      perjalanan.
+    - items (produk/qty) hanya bisa diubah selama order masih 'waiting'
+      (yaitu sebelum pembayaran). Mengubah item akan mengembalikan
+      jumlah lama, memvalidasi daftar baru terhadap stok saat ini,
+      lalu mengurangi stok lagi dan menghitung ulang total_amount dari
+      harga di database.
 
-    Requires a valid JWT; only the order's own owner may update it —
-    everyone else gets 404 (the order's existence is not revealed to
-    non-owners).
+    Membutuhkan JWT yang valid; hanya pemilik order sendiri yang boleh
+    mengubahnya — semua yang lain mendapat 404 (keberadaan order tidak
+    dibocorkan ke yang bukan pemiliknya).
     """
     order = Order.query.get(order_id)
     if order is None or order.user_id != int(get_jwt_identity()):
@@ -354,9 +360,9 @@ def update_order(order_id):
             return jsonify({
                 'error': 'Order items can only be changed while the order is "waiting" (not yet paid)'
             }), 409
-        # Tentatively restock the current items so the new list is
-        # validated against true available stock (the units this order
-        # already reserved go back into the pool first).
+        # Kembalikan stok item saat ini secara sementara, supaya daftar
+        # baru divalidasi terhadap stok yang benar-benar tersedia (unit
+        # yang sudah direservasi order ini dikembalikan ke pool dulu).
         _restock_order_items(order.id)
         resolved_items, error = _validate_and_resolve_items(data['items'])
         if error:
@@ -390,17 +396,19 @@ def update_order(order_id):
 @jwt_required()
 def pay_order(order_id):
     """
-    POST /orders/<id>/pay — simulates a payment gateway callback: on
-    success, the order transitions from 'waiting' straight to 'paid'.
+    POST /orders/<id>/pay — mensimulasikan callback dari payment
+    gateway: kalau sukses, order bertransisi dari 'waiting' langsung ke
+    'paid'.
 
-    Expected JSON body (optional):
+    Contoh body JSON (opsional):
     { "payment_method": "credit_card" }
 
-    Requires a valid JWT; only the order's own owner may pay for it.
+    Membutuhkan JWT yang valid; hanya pemilik order sendiri yang boleh
+    membayarnya.
 
-    This does not touch stock — stock was already reserved when the
-    order was placed (POST /orders). It only flips the status once the
-    transition is valid.
+    Endpoint ini tidak menyentuh stok — stok sudah direservasi saat
+    order dibuat (POST /orders). Ini hanya mengubah status setelah
+    transisinya valid.
     """
     order = Order.query.get(order_id)
     if order is None or order.user_id != int(get_jwt_identity()):
@@ -426,17 +434,19 @@ def pay_order(order_id):
 @jwt_required()
 def delete_order(order_id):
     """
-    DELETE /orders/<id> — deletes an order.
+    DELETE /orders/<id> — menghapus sebuah order.
 
-    Requires a valid JWT; only the order's own owner may delete it.
+    Membutuhkan JWT yang valid; hanya pemilik order sendiri yang boleh
+    menghapusnya.
 
-    Only allowed while the order is 'waiting' (nothing has been paid or
-    shipped yet — restocked automatically before deletion) or already
-    'cancelled' (stock was already restocked at cancellation time; this
-    just clears the record). Orders that are 'paid', 'shipped', or
-    'delivered' are part of financial/shipping history and cannot be
-    deleted — cancel a paid order first (PUT status=cancelled) if it is
-    still eligible.
+    Hanya diperbolehkan selama order masih 'waiting' (belum ada yang
+    dibayar atau dikirim — stok otomatis dikembalikan sebelum
+    penghapusan) atau sudah 'cancelled' (stok sudah dikembalikan saat
+    dibatalkan; ini cuma membersihkan datanya). Order yang 'paid',
+    'shipped', atau 'delivered' adalah bagian dari histori
+    finansial/pengiriman dan tidak bisa dihapus — batalkan dulu order
+    yang sudah dibayar (PUT status=cancelled) kalau masih memenuhi
+    syarat.
     """
     order = Order.query.get(order_id)
     if order is None or order.user_id != int(get_jwt_identity()):
@@ -447,10 +457,11 @@ def delete_order(order_id):
             'error': f'Cannot delete an order that is "{order.status}"; cancel it first if eligible'
         }), 409
 
+        
     try:
         if order.status in STOCK_RESERVED_STATUSES:
             _restock_order_items(order.id)
-        db.session.delete(order)  # order_items rows cascade via ON DELETE CASCADE
+        db.session.delete(order)  # baris order_items ikut terhapus otomatis via ON DELETE CASCADE
         db.session.commit()
     except Exception as e:
         db.session.rollback()

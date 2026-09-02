@@ -11,20 +11,21 @@ from app.utils import paginate_query, parse_pagination, parse_sort, slugify
 
 product_bp = Blueprint('products', __name__, url_prefix='/products')
 
-# Order statuses that count as "active" — a product still tied to one of
-# these via order_items cannot be deleted. 'delivered' and 'cancelled' are
-# considered final states, so a product is free to be deleted afterwards.
+# Status order yang dianggap "aktif" — produk yang masih terhubung ke
+# salah satu status ini via order_items tidak bisa dihapus. 'delivered'
+# dan 'cancelled' dianggap status akhir, jadi produk bebas dihapus setelahnya.
 ACTIVE_ORDER_STATUSES = ('waiting', 'paid', 'shipped')
 
-# Columns the client is allowed to sort GET /products by (whitelisted to
-# avoid sorting by arbitrary/unmapped attributes).
+# Kolom yang boleh dipakai client untuk sorting GET /products (dibatasi
+# lewat whitelist supaya tidak bisa sorting berdasarkan atribut
+# sembarangan/tidak dipetakan).
 SORTABLE_FIELDS = {'price', 'product_name', 'created_at', 'stock_quantity'}
 
 
 def _resolve_unique_slug(base_slug, *, exclude_product_id=None):
     """
-    Ensures a slug is unique by appending -2, -3, ... if the base slug
-    (or a fully custom one from the client) is already taken.
+    Memastikan sebuah slug itu unik, dengan menambahkan -2, -3, dst
+    kalau slug dasarnya (atau slug custom dari client) sudah dipakai.
     """
     slug = base_slug
     suffix = 2
@@ -41,15 +42,19 @@ def _resolve_unique_slug(base_slug, *, exclude_product_id=None):
 @product_bp.route('', methods=['GET'])
 def list_products():
     """
-    GET /products — lists products, with optional query parameters:
+    GET /products — menampilkan daftar produk, dengan parameter query
+    opsional:
 
-    - category_id: filter by category
-    - min_price / max_price: filter by price range
-    - search: case-insensitive substring match on product_name
-    - include_deleted: 'true' to include soft-deleted products (default: excluded)
-    - sort: column to sort by, e.g. 'price' (asc) or '-price' (desc).
-            Allowed: price, product_name, created_at, stock_quantity
-    - page / per_page: pagination (default page=1, per_page=20, max 100)
+    - category_id: filter berdasarkan kategori
+    - min_price / max_price: filter berdasarkan rentang harga
+    - search: cocokkan sebagian teks pada product_name, tidak peduli
+              huruf besar/kecil
+    - include_deleted: isi 'true' untuk menyertakan produk yang sudah
+                        soft-delete (default: tidak disertakan)
+    - sort: kolom untuk pengurutan, misal 'price' (naik) atau '-price'
+            (turun). Yang diperbolehkan: price, product_name,
+            created_at, stock_quantity
+    - page / per_page: pagination (default page=1, per_page=20, maks 100)
     """
     query = Product.query
 
@@ -97,7 +102,7 @@ def list_products():
 
 @product_bp.route('/<int:product_id>', methods=['GET'])
 def get_product(product_id):
-    """GET /products/<id> — returns a single product by id."""
+    """GET /products/<id> — mengembalikan satu produk berdasarkan id."""
     product = Product.query.get(product_id)
     if product is None:
         return jsonify({'error': f'Product with id {product_id} not found'}), 404
@@ -107,18 +112,18 @@ def get_product(product_id):
 @product_bp.route('', methods=['POST'])
 def create_product():
     """
-    POST /products — creates a new product.
+    POST /products — membuat produk baru.
 
-    Expected JSON body:
+    Contoh body JSON yang diharapkan:
     {
         "category_id": 1,
         "product_name": "Wireless Mouse",
-        "slug": "wireless-mouse",                      # optional, auto-generated from product_name if omitted
-        "description": "Ergonomic wireless mouse",     # optional
+        "slug": "wireless-mouse",                      # opsional, dibuat otomatis dari product_name jika tidak diisi
+        "description": "Ergonomic wireless mouse",     # opsional
         "price": 199000.00,
-        "stock_quantity": 40,                          # optional, default 0
+        "stock_quantity": 40,                          # opsional, default 0
         "sku": "ELEC-MOUS-004",
-        "images": ["https://.../1.jpg"]                 # optional, default []
+        "images": ["https://.../1.jpg"]                 # opsional, default []
     }
     """
     data = request.get_json(silent=True)
@@ -161,9 +166,10 @@ def create_product():
 @product_bp.route('/<int:product_id>', methods=['PUT'])
 def update_product(product_id):
     """
-    PUT /products/<id> — updates an existing product.
+    PUT /products/<id> — mengubah produk yang sudah ada.
 
-    Accepts a partial JSON body; only the fields provided are updated.
+    Menerima body JSON sebagian; hanya field yang dikirim yang akan
+    diubah.
     """
     product = Product.query.get(product_id)
     if product is None:
@@ -208,11 +214,12 @@ def update_product(product_id):
 @product_bp.route('/<int:product_id>', methods=['DELETE'])
 def delete_product(product_id):
     """
-    DELETE /products/<id> — soft-deletes a product (sets deleted_at),
-    unless it is linked to an order that is still active (status in
-    waiting/paid/shipped). The row stays in the database so existing
-    order/order_items history remains intact; it just disappears from
-    the default GET /products listing (see include_deleted).
+    DELETE /products/<id> — soft-delete sebuah produk (mengisi
+    deleted_at), kecuali produk itu masih terhubung ke order yang masih
+    aktif (status waiting/paid/shipped). Baris datanya tetap ada di
+    database supaya histori order/order_items tetap utuh; produknya
+    cuma menghilang dari daftar default GET /products (lihat parameter
+    include_deleted).
     """
     product = Product.query.get(product_id)
     if product is None:

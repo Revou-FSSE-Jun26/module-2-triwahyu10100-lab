@@ -1,15 +1,17 @@
 """
-Shared helpers used across route modules: slug generation and generic
-query-parameter parsing (pagination + sorting) for list endpoints.
+Fungsi bantuan yang dipakai bersama oleh semua modul route: pembuatan
+slug, dan pembacaan parameter query secara umum (pagination + sorting)
+untuk endpoint yang menampilkan daftar data.
 """
 import re
 
 
 def slugify(text):
     """
-    Converts a string into a URL-safe, lowercase, hyphen-separated slug.
+    Mengubah sebuah teks menjadi slug: aman untuk URL, huruf kecil semua,
+    dipisah tanda hubung.
 
-    Example: "Wireless Bluetooth Headphones!" -> "wireless-bluetooth-headphones"
+    Contoh: "Wireless Bluetooth Headphones!" -> "wireless-bluetooth-headphones"
     """
     text = text.strip().lower()
     text = re.sub(r'[^a-z0-9]+', '-', text)
@@ -19,12 +21,13 @@ def slugify(text):
 
 def parse_pagination(args, default_per_page=20, max_per_page=100):
     """
-    Reads `page` and `per_page` from a request's query string (a
-    werkzeug MultiDict, e.g. `request.args`).
+    Membaca `page` dan `per_page` dari query string permintaan (objek
+    MultiDict dari werkzeug, contohnya `request.args`).
 
-    Returns (page, per_page, error). `error` is a string describing what
-    went wrong, or None if both values are valid. Values are clamped to
-    sane bounds instead of raising, except for outright non-integer input.
+    Mengembalikan (page, per_page, error). `error` berisi teks penjelasan
+    kalau ada yang salah, atau None kalau kedua nilai valid. Nilai yang
+    di luar batas wajar akan dibatasi otomatis (bukan langsung ditolak),
+    kecuali kalau memang bukan angka bulat sama sekali.
     """
     page_raw = args.get('page', '1')
     per_page_raw = args.get('per_page', str(default_per_page))
@@ -50,11 +53,13 @@ def parse_pagination(args, default_per_page=20, max_per_page=100):
 
 def parse_sort(args, allowed_fields, default='created_at', default_direction='desc'):
     """
-    Reads a `sort` query parameter such as `sort=price` or `sort=-price`
-    (leading `-` means descending). Returns (field, direction, error).
+    Membaca parameter query `sort`, contohnya `sort=price` atau
+    `sort=-price` (tanda `-` di depan berarti urutan menurun/descending).
+    Mengembalikan (field, direction, error).
 
-    `allowed_fields` is an iterable of column names that are safe to sort
-    by (whitelisting avoids sorting by arbitrary/unmapped attributes).
+    `allowed_fields` adalah daftar nama kolom yang aman untuk dipakai
+    sebagai patokan sorting (dibatasi/whitelist supaya tidak bisa sorting
+    berdasarkan kolom sembarangan yang tidak seharusnya bisa diakses).
     """
     sort_raw = args.get('sort', None)
     if not sort_raw:
@@ -71,8 +76,9 @@ def parse_sort(args, allowed_fields, default='created_at', default_direction='de
 
 def paginate_query(query, page, per_page):
     """
-    Applies offset/limit pagination to a SQLAlchemy query and returns a
-    dict with the page of results plus pagination metadata.
+    Menerapkan pagination (offset/limit) ke sebuah query SQLAlchemy, dan
+    mengembalikan dict berisi hasil halaman tersebut plus informasi
+    metadata pagination-nya (total data, total halaman, dll).
     """
     total = query.count()
     items = query.offset((page - 1) * per_page).limit(per_page).all()

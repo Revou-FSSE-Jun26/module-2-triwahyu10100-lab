@@ -4,7 +4,7 @@ from app import db
 
 
 class Category(db.Model):
-    """Maps to the `categories` table from Checkpoint 1 (schema.sql)."""
+    """Terhubung ke tabel `categories` dari Checkpoint 1 (schema.sql)."""
 
     __tablename__ = 'categories'
 

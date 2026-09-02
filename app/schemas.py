@@ -1,39 +1,39 @@
 """
-Marshmallow schemas for request body validation.
+Schema Marshmallow untuk validasi body request.
 
-These schemas replace the hand-written "shape" validation that used to
-live inline in each route (presence, type, numeric range, list
-structure) — see PANDUAN_BELAJAR_CODING.md and
-VALIDASI_DAN_STATUS_CODE.md for the full before/after comparison.
+Schema-schema ini menggantikan validasi "bentuk data" yang dulu ditulis
+manual di dalam masing-masing route (cek keberadaan field, tipe data,
+rentang angka, struktur list) — lihat PANDUAN_BELAJAR_CODING.md dan
+VALIDASI_DAN_STATUS_CODE.md untuk perbandingan lengkap sebelum/sesudahnya.
 
-Two kinds of checks are deliberately kept OUTSIDE these schemas, still in
-the route itself:
+Ada dua jenis pengecekan yang sengaja TIDAK dimasukkan ke schema ini,
+tetap ditaruh di route-nya sendiri:
 
-- Uniqueness checks that must exclude "the record currently being
-  updated" (sku, category_name, username, email). marshmallow 4.x
-  removed the old Schema.context mechanism that older versions used for
-  this kind of thing (see the "Upgrading to 4.0" section of the
-  marshmallow docs), and there is no built-in replacement that fits a
-  one-off id exclusion cleanly. Keeping this in the route — right after
-  schema.load() succeeds — is simpler and keeps the schema focused on
-  pure data shape.
-- Cross-table / stateful business rules that aren't about a single
-  field's shape (e.g. "is there enough stock", "does this order allow
-  item changes right now"). Those remain in the route/helper functions,
-  unchanged from before.
+- Pengecekan duplikat/unik yang harus mengecualikan "data yang sedang
+  diupdate itu sendiri" (sku, category_name, username, email).
+  marshmallow versi 4.x sudah menghapus mekanisme Schema.context lama
+  yang biasa dipakai untuk hal semacam ini (lihat bagian "Upgrading to
+  4.0" pada dokumentasi marshmallow), dan tidak ada penggantinya yang
+  cocok untuk pengecualian satu id secara rapi. Menaruh pengecekan ini
+  di route — tepat setelah schema.load() berhasil — lebih sederhana dan
+  membuat schema tetap fokus hanya ke bentuk data.
+- Aturan bisnis antar-tabel/tergantung kondisi yang bukan soal bentuk
+  satu field saja (misal "apakah stoknya cukup", "apakah order ini boleh
+  diubah isinya sekarang"). Itu semua tetap ada di route/fungsi helper,
+  tidak berubah dari sebelumnya.
 
-Usage pattern in every route that uses a schema here:
+Pola penggunaan di setiap route yang memakai schema ini:
 
     try:
-        validated = SomeSchema().load(data)          # or load(data, partial=True) for PUT
+        validated = SomeSchema().load(data)          # atau load(data, partial=True) untuk PUT
     except ValidationError as err:
         return jsonify({'error': err.messages}), 400
 
-`err.messages` is a dict of `{field_name: [error, ...]}`, not a plain
-string — this is a deliberate difference from the rest of this API's
-hand-written validation (which always returns a single string under
-`error`). See VALIDASI_DAN_STATUS_CODE.md for why this trade-off was
-accepted rather than flattening it back into a string.
+`err.messages` berupa dict `{nama_field: [pesan_error, ...]}`, bukan
+string biasa — ini perbedaan yang disengaja dari validasi manual di
+bagian lain API ini (yang selalu mengembalikan satu string di bawah key
+`error`). Lihat VALIDASI_DAN_STATUS_CODE.md untuk alasan trade-off ini
+diterima, alih-alih meratakannya kembali jadi string.
 """
 from marshmallow import Schema, fields, validate, validates, ValidationError
 
@@ -53,12 +53,12 @@ __all__ = [
 
 
 class CategorySchema(Schema):
-    """Used for both POST /categories and PUT /categories/<id> (load(..., partial=True))."""
+    """Dipakai untuk POST /categories maupun PUT /categories/<id> (pakai load(..., partial=True) untuk yang PUT)."""
 
     class Meta:
-        # Unknown keys in the body are silently dropped rather than
-        # rejected — matches the old behavior, where routes only ever
-        # read the specific fields they cared about from `data`.
+        # Key yang tidak dikenal di body akan diam-diam diabaikan,
+        # bukan ditolak — sesuai perilaku lama, di mana route hanya
+        # pernah membaca field spesifik yang dibutuhkannya dari `data`.
         unknown = 'EXCLUDE'
 
     category_name = fields.Str(
@@ -70,13 +70,14 @@ class CategorySchema(Schema):
 
 class ProductSchema(Schema):
     """
-    Used for both POST /products and PUT /products/<id>
-    (load(..., partial=True) for the latter).
+    Dipakai untuk POST /products maupun PUT /products/<id> (yang PUT
+    pakai partial=True).
 
-    Deliberately does NOT validate `sku` uniqueness (needs to exclude the
-    product being updated) or generate `slug` (that stays a
-    product_routes.py concern, using slugify()/_resolve_unique_slug()
-    same as before) — both remain in the route after schema.load().
+    Dengan sengaja TIDAK memvalidasi keunikan `sku` (karena perlu
+    mengecualikan produk yang sedang diupdate) atau membuat `slug` (itu
+    tetap jadi tanggung jawab product_routes.py, memakai
+    slugify()/_resolve_unique_slug() seperti sebelumnya) — keduanya
+    tetap ditangani di route setelah schema.load().
     """
 
     class Meta:
@@ -87,8 +88,8 @@ class ProductSchema(Schema):
         required=True,
         validate=validate.Length(min=1, error='product_name cannot be empty'),
     )
-    # slug is optional and, if provided, is re-slugified by the route —
-    # this only guards against an explicitly empty string being sent.
+    # slug bersifat opsional, dan kalau diisi akan di-slugify ulang oleh
+    # route — ini hanya menjaga supaya tidak ada string kosong yang dikirim.
     slug = fields.Str(allow_none=True, validate=validate.Length(min=1, error='slug cannot be empty'))
     description = fields.Str(allow_none=True)
     price = fields.Float(
@@ -107,18 +108,18 @@ class ProductSchema(Schema):
     @validates('category_id')
     def validate_category_id_exists(self, value, data_key):
         """
-        Referential check: only runs when category_id is present in the
-        input (so it's naturally skipped on a partial PUT that doesn't
-        touch category_id). No self-exclusion needed here — unlike sku
-        uniqueness, a product's own category_id can never "conflict"
-        with itself.
+        Pengecekan referensi: hanya berjalan kalau category_id memang
+        ada di input (jadi otomatis di-skip pada PUT sebagian yang tidak
+        menyentuh category_id). Tidak perlu pengecualian diri sendiri di
+        sini — berbeda dengan keunikan sku, category_id sebuah produk
+        tidak pernah bisa "konflik" dengan dirinya sendiri.
         """
         if Category.query.get(value) is None:
             raise ValidationError(f'Category with id {value} does not exist')
 
 
 class OrderItemSchema(Schema):
-    """One line item inside the `items` list of OrderCreateSchema."""
+    """Satu baris item di dalam list `items` milik OrderCreateSchema."""
 
     class Meta:
         unknown = 'EXCLUDE'
@@ -132,11 +133,12 @@ class OrderItemSchema(Schema):
 
 class OrderCreateSchema(Schema):
     """
-    Used for POST /orders. Only validates the request body's shape —
-    duplicate product_id across lines, product existence, and stock
-    availability are cross-table/stateful checks that stay in
-    order_routes.py's _validate_and_resolve_items() helper, run right
-    after this schema succeeds (see the comment there for why).
+    Dipakai untuk POST /orders. Hanya memvalidasi bentuk body request —
+    pengecekan product_id duplikat antar baris, keberadaan produk, dan
+    ketersediaan stok adalah pengecekan antar-tabel/tergantung kondisi
+    yang tetap ditaruh di fungsi helper _validate_and_resolve_items() di
+    order_routes.py, dijalankan tepat setelah schema ini berhasil (lihat
+    komentar di sana untuk alasannya).
     """
 
     class Meta:
@@ -154,7 +156,7 @@ class OrderCreateSchema(Schema):
 
 
 class UserRegisterSchema(Schema):
-    """Used for POST /users. Does not check email/username uniqueness — see module docstring."""
+    """Dipakai untuk POST /users. Tidak mengecek keunikan email/username — lihat docstring modul di atas."""
 
     class Meta:
         unknown = 'EXCLUDE'
@@ -169,7 +171,7 @@ class UserRegisterSchema(Schema):
 
 
 class UserUpdateSchema(Schema):
-    """Used for PUT /users/<id> (load(..., partial=True)). Intentionally excludes email/password — see route docstring."""
+    """Dipakai untuk PUT /users/<id> (pakai partial=True). Sengaja tidak menyertakan email/password — lihat docstring di route-nya."""
 
     class Meta:
         unknown = 'EXCLUDE'
@@ -180,7 +182,7 @@ class UserUpdateSchema(Schema):
 
 
 class LoginSchema(Schema):
-    """Used for POST /auth/login."""
+    """Dipakai untuk POST /auth/login."""
 
     class Meta:
         unknown = 'EXCLUDE'
