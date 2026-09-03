@@ -188,7 +188,7 @@ locust -f locustfile.py --host http://127.0.0.1:5000 --users 200 --spawn-rate 10
 - **Database**: PostgreSQL hosted (Render/Railway/Supabase/Neon, dll).
   Setelah database live, jalankan `flask db upgrade` terhadap
   `DATABASE_URL` production untuk menerapkan seluruh migrasi.
-- URL production: [[_isi setelah deploy_](https://2assigmentcheckpoint1-production.up.railway.app/products)]
+- URL production: [[_link_deploy_](https://2assigmentcheckpoint1-production.up.railway.app/products)]
 
 
 ## Screenshots
