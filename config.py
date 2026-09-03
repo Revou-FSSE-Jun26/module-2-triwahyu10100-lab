@@ -21,14 +21,11 @@ class Config:
     """Base configuration for the Flask app."""
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 
-    # PostgreSQL connection string
-    _raw_db_url = os.environ.get('DATABASE_URL')
-    if not _raw_db_url:
-        raise RuntimeError(
-            "DATABASE_URL environment variable is not set! "
-            "Check that the Postgres service is linked in Railway → Variables."
-        )
-    SQLALCHEMY_DATABASE_URI = _normalize_database_url(_raw_db_url)
+    # PostgreSQL connection string — adjust user/password to match your local setup
+    SQLALCHEMY_DATABASE_URI = _normalize_database_url(os.environ.get(
+        'DATABASE_URL',
+        'postgresql://postgres:postgres@localhost:5432/revoshop_db'
+    ))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Secret used to sign/verify JWT access tokens (Flask-JWT-Extended).
