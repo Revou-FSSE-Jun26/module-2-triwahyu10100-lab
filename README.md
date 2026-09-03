@@ -122,7 +122,7 @@ yang menyimpan snapshot harga saat pembelian.
 - **Locust** — load/performance testing
 - **python-dotenv** — memuat konfigurasi dari `.env`
 - **gunicorn** — WSGI server untuk production
-- Platform deployment: _isi sesuai platform yang kamu pakai, misalnya Render/Railway_
+- Platform deployment:Railway 
 
 ## How to Run the Project Locally
 
@@ -188,15 +188,39 @@ locust -f locustfile.py --host http://127.0.0.1:5000 --users 200 --spawn-rate 10
 - **Database**: PostgreSQL hosted (Render/Railway/Supabase/Neon, dll).
   Setelah database live, jalankan `flask db upgrade` terhadap
   `DATABASE_URL` production untuk menerapkan seluruh migrasi.
-- URL production: _isi setelah deploy_
+- URL production: [[_isi setelah deploy_](https://2assigmentcheckpoint1-production.up.railway.app/products)]
+
 
 ## Screenshots
 
-_Tambahkan juga di sini bila ada:_
-- Tampilkan screenshot test manual di Postman untuk endpoint User & Auth, dari
-  registrasi sampai soft-delete (JWT diperlukan untuk PUT/DELETE).
-- Tampilan pgAdmin/DBeaver atas tabel-tabel di database production.
-- Dashboard Locust (opsional).
+### Postman — Flow User & Auth (registrasi sampai soft-delete)
+
+| # | Langkah | Screenshot |
+|---|---|---|
+| 1 | Register user baru | ![Register user baru](screenshots-postman/1-register-user-baru.png) |
+| 2 | Login untuk dapat JWT token | ![Login untuk dapat JWT token](screenshots-postman/2-login-untuk-dapat-jwt-token.png) |
+| 3 | Get user | ![Get user](screenshots-postman/3-get-user.png) |
+| 4 | Update user (butuh JWT) | ![Update user](screenshots-postman/4-update-user.png) |
+| 5 | Delete user (soft-delete, butuh JWT) | ![Delete user](screenshots-postman/5-delete-user.png) |
+| 6 | Verifikasi akun sudah dinonaktifkan | ![Verifikasi](screenshots-postman/6-verifikasi.png) |
+
+### DBeaver — Tabel di Database Production
+
+| Tabel | Screenshot |
+|---|---|
+| `alembic_version` (riwayat migrasi) | ![alembic_version](screenshots-dbeaver/alembic-version.png) |
+| `users` | ![users](screenshots-dbeaver/users.png) |
+| `categories` | ![categories](screenshots-dbeaver/categories.png) |
+| `products` | ![products](screenshots-dbeaver/products.png) |
+| `orders` | ![orders](screenshots-dbeaver/orders.png) |
+| `order_items` | ![order_items](screenshots-dbeaver/order-item.png) |
+
+### Locust — Load Test Dashboard
+
+![Locust dashboard](screenshot-locustfile-dashboard/dashboard-locust.png)
+
+### Pytest 
+- ada di file report.html
 
 ## Project Structure
 
